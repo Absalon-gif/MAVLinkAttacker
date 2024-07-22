@@ -7,9 +7,6 @@ class PacketStorage:
 
 
     def store_packet(self, mav_packet, addr):
-        packet_info = {
-
-        }
         return
 
     def retrieve_packet(self):

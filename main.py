@@ -43,6 +43,7 @@ class PacketSnifferGUI(QMainWindow):
             self.capture_thread = threading.Thread(target=self.sniffer.start_sniffing)
             self.capture_thread.start()
             self.log_output.append('Capture started...')
+            print('Capture started...')
 
     def stop_capture(self):
         if self.capturing:

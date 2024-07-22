@@ -63,6 +63,7 @@ class PacketSniffer:
             "timestamp": datetime.now().isoformat(),
             "source_ip": addr[0],
             "destination_ip": addr[1],
+            "length": len(mav_packet),
         }
 
     def stop_sniffing(self):
