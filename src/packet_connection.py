@@ -41,9 +41,10 @@ class PacketSniffer:
             while not self.stop_event.is_set():
                 try:
                     raw_packet, addr = self.sniffer.recvfrom(65565)
-                    if PacketAnalyzer.is_mavlink_packet(raw_packet):
-                        print(f"Captured MAVLINK packet: {raw_packet}; Address stuff: {addr}")
-                        self.log_function(f"Captured MAVLink packet: {raw_packet[:16]}; Address stuff: {addr}")
+                    #if PacketAnalyzer.is_mavlink_packet(raw_packet):
+                    print(f"Captured MAVLINK packet: {raw_packet}; Address stuff: {addr}")
+                    print(f"packet index first: {raw_packet[14]}")
+                    self.log_function(f"Captured MAVLink packet: {raw_packet[:16]}; Address stuff: {addr}")
                 except socket.error as e:
                     self.log_function(f"Socket Error: {e}")
                     break
@@ -60,10 +61,40 @@ class PacketSniffer:
 
         return {
             "packet_id": PacketSniffer.current_packet_id,
+            "ethernet_header": [ # All in all this is 14 bytes of the packet received raw
+                {
+                    "dest_mac_addr": None, # first 6 bytes of the frame or [0:5]
+                    "source_mac_addr": None, # after the 6th byte, and ends after counting 6 bytes [6: 6 + len(dest_mac_addr)]
+                }
+            ],
+            "ip_header": [ # Standard at 20 bytes of the packet sent [len(ethernet_header): len(ethernet_header) + 20]
+                {
+                    "identification": None, # 2 bytes [25:27]
+                    "flags": None, # 1 byte [28:29]
+                    "fragment_offset": None, # 1 byte [29:30]
+                    "protocol": None, # [32:33] 1 byte
+                    "checksum": None, # 2 bytes [34:36]
+                    "source_ip": None, # 4 bytes [37: 37 + 4]
+                    "destination_ip": None, # 4 bytes [42:42 + 4]
+                }
+            ],
+            "udp_header": [ # standard 8 bytes [len(ip_header) + len(ethernet_header): len(ip_header) + len(ethernet_header) + 8]
+                {
+                    "source_port": None, # 2 bytes
+                    "destination_port": None, # 2 bytes
+                    "length": None, # 2 bytes
+                    "checksum": None # 2 bytes
+                }
+            ],
             "timestamp": datetime.now().isoformat(),
-            "source_ip": addr[0],
-            "destination_ip": addr[1],
-            "length": len(mav_packet),
+            "mavlink_message": [
+                {
+                    "system_id": 1,
+                    "component_id": None,
+                    "msg_id": None,
+                    "payload": None
+                }
+            ]
         }
 
     def stop_sniffing(self):
