@@ -3,7 +3,6 @@ import struct
 import threading
 from datetime import datetime
 from src.sniffer.packet_storage import PacketStorage
-from concurrent.futures import ThreadPoolExecutor
 
 MAVLINK_START_BYTE = '0xFE'
 

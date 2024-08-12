@@ -1,5 +1,4 @@
 import socket
-import binascii
 import ipaddress
 
 

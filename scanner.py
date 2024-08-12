@@ -2,8 +2,7 @@ import sys
 import threading
 from PyQt5.QtCore import QThread, pyqtSignal
 from src.attack_spectrum.attack import Attacker
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QPushButton, QLineEdit, QTextEdit, QWidget, \
-    QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QPushButton, QLineEdit, QTextEdit, QWidget, QHBoxLayout
 
 NETWORK_INTERFACE = 'wlan0'
 
@@ -61,17 +60,17 @@ class ScannerApp(QMainWindow):
         self.log_output = QTextEdit(self)
         self.log_output.setReadOnly(True)
 
-        # Connect buttons to functions
         self.start_scan_button.clicked.connect(self.start_scan)
         self.start_mitm_button.clicked.connect(self.perform_mitm_attack)
 
-        # Layout
+        # Scan Layout
         scan_layout = QHBoxLayout()
         scan_layout.addWidget(QLabel('Start IP:'))
         scan_layout.addWidget(self.start_ip_input)
         scan_layout.addWidget(QLabel('End IP:'))
         scan_layout.addWidget(self.end_ip_input)
 
+        # MITM Layout
         mitm_layout = QVBoxLayout()
         mitm_layout.addWidget(QLabel('Drone IP:'))
         mitm_layout.addWidget(self.drone_ip_input)
