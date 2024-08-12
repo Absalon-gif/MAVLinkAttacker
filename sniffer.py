@@ -1,9 +1,9 @@
 import sys
 import threading
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QTextEdit, QVBoxLayout, QWidget
-from src.packet_connection import PacketSniffer
+from src.sniffer.packet_connection import PacketSniffer
 
-NETWORK_INTERFACE = "wlan0"
+NETWORK_INTERFACE = 'wlan0'
 
 
 class PacketSnifferGUI(QMainWindow):
