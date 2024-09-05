@@ -71,7 +71,7 @@ class PacketSniffer:
                     if socket.inet_ntoa(raw_packet[30:34]) == attacker_ip_address or socket.inet_ntoa(
                             raw_packet[26:30]) == attacker_ip_address:
                         continue
-                    if src_udp_port in BLOCKED_PORTS and dest_udp_port in BLOCKED_PORTS:
+                    if src_udp_port in BLOCKED_PORTS or dest_udp_port in BLOCKED_PORTS:
                         continue
                     if type_protocol == '11':
                         self.log_function("Captured Packet")
