@@ -40,6 +40,8 @@ packet_dict = {
     ]
 }
 
+BLOCKED_PORTS = {53, 67, 68, 123}
+
 
 class PacketSniffer:
     current_packet_id = 0
@@ -62,10 +64,14 @@ class PacketSniffer:
                     raw_packet, addr = self.sniffer.recvfrom(65565)
                     eth_protocol = int.from_bytes(raw_packet[12:14], byteorder='big')
                     type_protocol = raw_packet[23:24].hex()
+                    src_udp_port = int.from_bytes(raw_packet[34:36], byteorder='big')
+                    dest_udp_port = int.from_bytes(raw_packet[36:38], byteorder='big')
                     if eth_protocol != 0x0800:
                         continue
                     if socket.inet_ntoa(raw_packet[30:34]) == attacker_ip_address or socket.inet_ntoa(
                             raw_packet[26:30]) == attacker_ip_address:
+                        continue
+                    if src_udp_port in BLOCKED_PORTS and dest_udp_port in BLOCKED_PORTS:
                         continue
                     if type_protocol == '11':
                         self.log_function("Captured Packet")
@@ -99,7 +105,8 @@ class PacketSniffer:
         converted_string = ':'.join(f'{byte:02x}' for byte in byte)
         return converted_string
 
-    def create_packet(self, mav_packet):
+    @staticmethod
+    def create_packet(mav_packet):
         PacketSniffer.current_packet_id += 1
 
         # Ethernet Header
