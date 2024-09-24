@@ -17,6 +17,7 @@ class ARPScan(QThread):
         self.attacker = attacker
 
     def run(self):
+        self.update_log.emit("Scan started...")
         active_hosts = self.attacker.start_scan(self.start_ip, self.end_ip)
         print(f"active hosts: {active_hosts}")
         self.update_log.emit("Active hosts found:")
@@ -25,6 +26,7 @@ class ARPScan(QThread):
 
 
 class ScannerApp(QMainWindow):
+
     def __init__(self):
         super().__init__()
         self.attacker = Attacker(NETWORK_INTERFACE)
@@ -120,13 +122,12 @@ class ScannerApp(QMainWindow):
         gcs_mac = self.gcs_mac_input.text()
 
         if not (attacker_mac and drone_ip and drone_mac and gcs_ip and gcs_mac):
-            self.log_output.append('Enter all necessary fields for MITM attack.')
+            self.update_mitm_log.emit('Enter all necessary fields for MITM attack.')
             return
 
-        self.start_threads(attacker_mac, drone_ip, drone_mac, gcs_ip, gcs_mac)
         self.log_output.append('Starting MITM attack...')
-
         self.log_output.append('MITM attack in progress...')
+        self.start_threads(attacker_mac, drone_ip, drone_mac, gcs_ip, gcs_mac)
 
     def start_scan(self):
         start_ip = self.start_ip_input.text()

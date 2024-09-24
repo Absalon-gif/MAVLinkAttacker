@@ -6,41 +6,13 @@ from src.sniffer.packet_storage import PacketStorage
 
 MAVLINK_START_BYTE = '0xFE'
 
-packet_dict = {
-    "packet_id": None,
-    "timestamp": None,
-    "source_ip": None,
-    "destination_ip": None,
-    "length": None,
-    "mavlink_messages": [
-        {
-            "system_id": None,
-            "component_id": None,
-            "msg_id": None,
-            "payload": None
-        }
-    ],
-    "udp_header": [
-        # standard 8 bytes [len(ip_header) + len(ethernet_header): len(ip_header) + len(ethernet_header) + 8]
-        {
-            "source_port": None,  # 2 bytes
-            "destination_port": None,  # 2 bytes
-            "length": None,  # 2 bytes
-            "checksum": None,  # 2 bytes
-        }
-    ],
-    "timestamp": datetime.now().isoformat(),
-    "mavlink_message": [
-        {
-            "system_id": 1,
-            "component_id": None,
-            "msg_id": None,
-            "payload": None
-        }
-    ]
-}
 
 BLOCKED_PORTS = {53, 67, 68, 123}
+
+
+def convert_byte_to_mac_string(byte):
+    converted_string = ':'.join(f'{byte:02x}' for byte in byte)
+    return converted_string
 
 
 class PacketSniffer:
@@ -76,6 +48,7 @@ class PacketSniffer:
                     if type_protocol == '11':
                         self.log_function("Captured Packet")
                         print("Captured Packet")
+                        print(raw_packet)
                         PacketStorage.store_packet(self.create_packet(raw_packet))
                 except socket.error as e:
                     self.log_function(f"Socket Error: {e}")
@@ -100,10 +73,6 @@ class PacketSniffer:
         except Exception as e:
             print(f"Exception while getting ip address: {e}")
 
-    @staticmethod
-    def convert_byte_to_mac_string(byte):
-        converted_string = ':'.join(f'{byte:02x}' for byte in byte)
-        return converted_string
 
     @staticmethod
     def create_packet(mav_packet):
@@ -131,13 +100,14 @@ class PacketSniffer:
         udp_payload_length = len(udp_payload)
 
 
+
         return {
             "packet_id": PacketSniffer.current_packet_id,
             "timestamp": datetime.now().isoformat(),
             "ethernet_header": [  # All in all this is 14 bytes of the packet received raw
                 {
-                    "dest_mac_addr": ethernet_frame[0],  # self.convert_byte_to_mac_string(mav_packet[:6]),
-                    "source_mac_addr": ethernet_frame[1],  # self.convert_byte_to_mac_string(mav_packet[6:12]),
+                    "dest_mac_addr": convert_byte_to_mac_string(ethernet_frame[0]),  # self.convert_byte_to_mac_string(mav_packet[:6]),
+                    "source_mac_addr": convert_byte_to_mac_string(ethernet_frame[1]),  # self.convert_byte_to_mac_string(mav_packet[6:12]),
                     # after the 6th byte, and ends after counting 6 bytes [6: 6 + len(dest_mac_addr)]
                 }
             ],
@@ -162,7 +132,7 @@ class PacketSniffer:
             "udp_payload": [
                 {
                     "payload_length": udp_payload_length,
-                    "payload": udp_payload
+                    "payload": udp_payload.hex()
                 }
             ]
         }
