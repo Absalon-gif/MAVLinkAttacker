@@ -1,4 +1,6 @@
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QVBoxLayout, QFileDialog, QTextEdit
 import subprocess
+import sys
 import math
 
 EOF_MARKERS = [
@@ -9,90 +11,115 @@ EOF_MARKERS = [
     ]
 
 
-def get_physical_size(file_path):
-    try:
-        stat_output = subprocess.check_output(['stat', '--format=%s %b %B', file_path]).decode().strip()
-        content_file_size, num_blocks, block_size = map(int, stat_output.split())
-        physical_file_size = num_blocks * block_size
-        return physical_file_size
-    except Exception as e:
-        print(f"Error retrieving physical size: {e}")
-        return None
+class EntropyAnalyzer(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
 
+    def init_ui(self):
+        self.setWindowTitle('Entropy Analyzer')
 
-def check_database(data):
-    for marker in EOF_MARKERS:
-        index = data.find(marker)
-        if index != -1:
-            return index + len(marker)
-    return -1
+        self.layout = QVBoxLayout()
 
+        self.label = QLabel('Select a file to analyze:')
+        self.layout.addWidget(self.label)
 
-def extract_eof(file_path):
-    try:
-        with open(file_path, 'rb') as f:
-            data = f.read()
+        self.text_edit = QTextEdit()
+        self.layout.addWidget(self.text_edit)
 
-        eof_position = check_database(data)
+        self.button = QPushButton('Open File')
+        self.button.clicked.connect(self.open_file)
+        self.layout.addWidget(self.button)
 
-        if eof_position == -1:
-            print("EOF marker not found.")
+        self.setLayout(self.layout)
+
+    def open_file(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select a file", "", "All Files (*)", options=options)
+
+        if file_path:
+            self.analyze_file(file_path)
+
+    def analyze_file(self, file_path):
+        physical_file_size = self.get_physical_size(file_path)
+        self.text_edit.append(
+            f"Physical Size: {physical_file_size} bytes" if physical_file_size else "Could not retrieve physical size.")
+
+        extracted_data = self.extract_eof(file_path)
+
+        if extracted_data:
+            data_entropy = self.calculate_entropy(extracted_data)
+            self.text_edit.append(f"Entropy of extracted data: {data_entropy}")
+            self.flag_abnormal_files(data_entropy)
+
+    @staticmethod
+    def get_physical_size(file_path):
+        try:
+            command = subprocess.check_output(['stat', '--format=%s %b %B', file_path]).decode().strip()
+            content_file_size, num_blocks, block_size = map(int, command.split())
+            return num_blocks * block_size
+        except Exception as e:
+            print(f"Error retrieving physical size: {e}")
             return None
 
-        extracted_data = data[eof_position:]
-        return extracted_data
+    def extract_eof(self, file_path):
+        try:
+            with open(file_path, 'rb') as f:
+                data = f.read()
 
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return None
+            eof_position = self.check_database(data)
+
+            if eof_position == -1:
+                print("EOF marker not found.")
+                return None
+
+            return data[eof_position:]
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return None
+
+    @staticmethod
+    def check_database(data):
+        for marker in EOF_MARKERS:
+            index = data.find(marker)
+            if index != -1:
+                return index + len(marker)
+        return -1
+
+    @staticmethod
+    def calculate_entropy(data):
+        if not data:
+            return 0
+
+        byte_frequency = {}
+        for byte in data:
+            byte_frequency[byte] = byte_frequency.get(byte, 0) + 1
+
+        entropy = 0.0
+        length = len(data)
+
+        for freq in byte_frequency.values():
+            p = freq / length
+            entropy -= p * math.log2(p)
+
+        return entropy
+
+    def flag_abnormal_files(self, entropy, low_threshold=1.0):
+        if 0.2 < entropy < low_threshold:
+            self.text_edit.append("Flagged: Low entropy, but still suspicious.")
+        elif entropy > low_threshold:
+            self.text_edit.append("Flagged: High entropy, likely altered.")
+        elif entropy <= 0.2:
+            self.text_edit.append("Normal: File seems normal.")
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    analyzer = EntropyAnalyzer()
+    analyzer.resize(400, 300)
+    analyzer.show()
+    sys.exit(app.exec_())
 
 
-def calculate_shannon_entropy(data):
-    if not data:
-        return 0
-
-    byte_frequency = {}
-    for byte in data:
-        byte_frequency[byte] = byte_frequency.get(byte, 0) + 1
-
-    entropy = 0.0
-    length = len(data)
-
-    for freq in byte_frequency.values():
-        p = freq / length
-        entropy -= p * math.log2(p)
-
-    return entropy
 
 
-def flag_abnormal_files(data):
-        slack_data_entropy = calculate_shannon_entropy(data)
-        return slack_data_entropy
-
-def print_statements(entropy, file_path, low_threshold=1.0):
-    print(f"Entropy of extracted data: {entropy}")
-    print(f"File: {file_path}, Entropy: {entropy}")
-
-    if 0.2 < entropy < low_threshold:
-        print(f"Flagged: {file_path}; Has low entropy, however still suspicious")
-    elif entropy > low_threshold:
-        print(f"Flagged: {file_path}; Has high entropy, likely altered")
-    elif entropy <= 0.2:
-        print(f"Normal: {file_path}; File seems normal")
-
-
-if __name__ == "__main__":
-    input_file = input("Enter the path to the file: ")
-
-    physical_size = get_physical_size(input_file)
-    if physical_size is not None:
-        print(f"Physical Size: {physical_size} bytes")
-
-        padded_data = extract_eof(input_file)
-
-        if padded_data is not None:
-            data_entropy = flag_abnormal_files(padded_data)
-            print_statements(data_entropy, input_file)
-
-    else:
-        print("Could not retrieve physical size. Please check the file path.")
